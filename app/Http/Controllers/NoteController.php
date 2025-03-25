@@ -2,54 +2,76 @@
 
 namespace App\Http\Controllers;
 
-
-use Illuminate\Http\Response;
+use App\Models\Note;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Support\Facades\DB;
-
-use function Laravel\Prompts\table;
 
 class NoteController extends Controller
 {
     /**
      * Display a listing of the resource.
      */
+//    public function index()
+//    {
+//        $notes = DB::table('notes')
+//            ->orderBy('updated_at', 'desc')
+//            ->get();
+//        return response()->json($notes);
+//    }
+
     public function index()
     {
-        $notes = DB::table('notes')->orderBy('created_at', 'desc')->get();
+        $notes = Note::orderBy('updated_at', 'desc')->get();
         return response()->json($notes);
     }
 
     /**
      * Store a newly created resource in storage.
      */
+//    public function store(Request $request)
+//    {
+//        $note = DB::table('notes')->insert([
+//            'user_id' => $request->user_id,
+//            'title' => $request->title,
+//            'body' => $request->body,
+//            'created_at' => now(),
+//            'updated_at' => now(),
+//        ]);
+//
+//        if ($note) {
+//            return response()->json(['message' => 'Poznámka bola vytvorená'], Response::HTTP_CREATED);
+//        } else {
+//            return response()->json(['message' => 'Poznámka nebola vytvorená'], Response::HTTP_FORBIDDEN);
+//        }
+//    }
+
     public function store(Request $request)
     {
-        $note = DB::table('notes')->insert([
-            'user_id'=>$request->user_id,
-            'title'=>$request->title,
-            'body'=>$request->body,
-            'created_at'=>now(),
-            'updated_at'=>now(),
+        $note = Note::create([
+            'user_id' => $request->user_id,
+            'title' => $request->title,
+            'body' => $request->body
         ]);
 
-        if($note){
-            return response()->json(["message" => "Poznamka bola vytvorena"],Response::HTTP_CREATED);
+        if ($note) {
+            return response()->json(['message' => 'Poznámka bola vytvorená'], Response::HTTP_CREATED);
         } else {
-            return response()->json(["message" => "Something went wrong"],Response::HTTP_FORBIDDEN);
+            return response()->json(['message' => 'Poznámka nebola vytvorená'], Response::HTTP_FORBIDDEN);
         }
-
-
     }
 
     /**
      * Display the specified resource.
      */
-    public function show(string $id)
+    public function show($id)
     {
-        $note = DB::table('notes')->where('id', $id)->first();
-        if($note){
-            return response()->json(["message" => "Poznamka nebola najdena"],Response::HTTP_NOT_FOUND);
+        //$note = DB::table('notes')->where('id', $id)->first();
+
+        $note = Note::find($id);
+
+        if (!$note) {
+            return response()->json(['message' => 'Poznámka nebola nájdená'], Response::HTTP_NOT_FOUND);
         }
 
         return response()->json($note);
@@ -58,36 +80,62 @@ class NoteController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, string $id)
+//    public function update(Request $request, $id)
+//    {
+//        $updated = DB::table('notes')->where('id', $id)->update([
+//            'title' => $request->title,
+//            'body' => $request->body,
+//            'updated_at' => now(),
+//        ]);
+//
+//        if ($updated) {
+//            return response()->json(['message' => 'Poznámka bola aktualizovaná'], Response::HTTP_OK);
+//        } else {
+//            return response()->json(['message' => 'Nič sa nezmenilo'], Response::HTTP_OK);
+//        }
+//    }
+
+    public function update(Request $request, $id)
     {
-        $update = DB::table('notes')->where('id', $id)->update([
-            'title'=>$request->title,
-            'body'=>$request->body,
-            'updated_at'=>now(),
+        $note = Note::find($id);
+
+        if (!$note) {
+            return response()->json(['message' => 'Poznámka nebola nájdená'], Response::HTTP_NOT_FOUND);
+        }
+
+        $note->update([
+            'title' => $request->title,
+            'body' => $request->body
         ]);
 
-        if($update){
-            return response()->json(["message" => "Poznamka bola aktualizovana"],Response::HTTP_OK);
-        }
-        else{
-            return response()->json(["message" => "Poznamka nebola aktualizovana"],Response::HTTP_OK);
-        }
+        return response()->json(['message' => 'Poznámka bola aktualizovaná', 'note' => $note]);
     }
 
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(string $id)
-    {
-        $delete = DB::table('notes')->where('id', $id)->delete();
-        if($delete){
-            return response()->json(["message" => "Poznamka bola vymazana"],Response::HTTP_OK);
-        }
-        else{
-            return response()->json(["message" => "Poznamka nebola najdena"],Response::HTTP_NOT_FOUND);
-        }
-    }
+//    public function destroy($id)
+//    {
+//        $deleted = DB::table('notes')->where('id', $id)->delete();
+//
+//        if ($deleted) {
+//            return response()->json(['message' => 'Poznámka bola vymazaná'], Response::HTTP_OK);
+//        } else {
+//            return response()->json(['message' => 'Poznámka nebola nájdená'], Response::HTTP_NOT_FOUND);
+//        }
+//    }
 
+    public function destroy($id)
+    {
+        $note = Note::find($id);
+
+        if (!$note) {
+            return response()->json(['message' => 'Poznámka nebola nájdená'], Response::HTTP_NOT_FOUND);
+        }
+
+        $note->delete();
+        return response()->json(['message' => 'Poznámka bola vymazaná']);
+    }
 
     /**
      * Vlastné metódy
@@ -120,6 +168,26 @@ class NoteController extends Controller
     }
 
     // Fulltextové vyhľadávanie v poznámkach
+//    public function searchNotes(Request $request)
+//    {
+//        $query = $request->query('q');
+//
+//        if (empty($query)) {
+//            return response()->json(['message' => 'Musíte zadať dopyt na vyhľadávanie'], Response::HTTP_BAD_REQUEST);
+//        }
+//
+//        $notes = DB::table('notes')
+//            ->where('title', 'like', '%' . $query . '%')
+//            ->orWhere('body', 'like', '%' . $query . '%')
+//            ->get();
+//
+//        if ($notes->isEmpty()) {
+//            return response()->json(['message' => 'Žiadne poznámky sa nenašli'], Response::HTTP_NOT_FOUND);
+//        }
+//
+//        return response()->json($notes);
+//    }
+
     public function searchNotes(Request $request)
     {
         $query = $request->query('q');
@@ -128,10 +196,7 @@ class NoteController extends Controller
             return response()->json(['message' => 'Musíte zadať dopyt na vyhľadávanie'], Response::HTTP_BAD_REQUEST);
         }
 
-        $notes = DB::table('notes')
-            ->where('title', 'like', '%' . $query . '%')
-            ->orWhere('body', 'like', '%' . $query . '%')
-            ->get();
+        $notes = Note::searchByTitleOrBody($query); // Použitie vlastnej metódy z modelu
 
         if ($notes->isEmpty()) {
             return response()->json(['message' => 'Žiadne poznámky sa nenašli'], Response::HTTP_NOT_FOUND);
@@ -139,6 +204,7 @@ class NoteController extends Controller
 
         return response()->json($notes);
     }
+
 
     //Počet poznámok podľa používateľa
     public function usersWithNotesCount()
