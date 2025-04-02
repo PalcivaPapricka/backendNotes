@@ -20,9 +20,16 @@ class NoteController extends Controller
 //        return response()->json($notes);
 //    }
 
-    public function index()
+ /**   public function index()
     {
         $notes = Note::orderBy('updated_at', 'desc')->get();
+        return response()->json($notes);
+    }
+**/
+
+    public function index()
+    {
+        $notes =Note::with(['user','categories'])->orderBy('updated_at','desc')->get();
         return response()->json($notes);
     }
 
@@ -45,7 +52,7 @@ class NoteController extends Controller
 //            return response()->json(['message' => 'Poznámka nebola vytvorená'], Response::HTTP_FORBIDDEN);
 //        }
 //    }
-
+/**
     public function store(Request $request)
     {
         $note = Note::create([
@@ -60,6 +67,44 @@ class NoteController extends Controller
             return response()->json(['message' => 'Poznámka nebola vytvorená'], Response::HTTP_FORBIDDEN);
         }
     }
+**/
+
+    public function store(Request $request)
+    {
+        try {
+            $validated = $request->validate([
+                'user_id' => 'required|exists:users,id',
+                'title' => 'required|string|min:5|max:255',
+                'body' => 'required|string',
+                'categories' => 'array|max:3',
+                'categories.*' => 'exists:categories,id'
+            ]);
+
+            $note =Note::create([
+                'user_id' => $validated['user_id'],
+                'title' => $validated['title'],
+                'body' => $validated['body'],
+            ]);
+
+
+            if(!empty($validated['categories'])){
+              $note->categories()->sync($validated['categories']);
+            }
+
+            $note->load('user','categories');
+
+            return response()->json([
+                'message' => 'Note created successfully',
+                'note' => $note
+
+            ], Response::HTTP_CREATED);
+
+        } catch (\Exception $e) {
+            return response()->json(['message' => $e->getMessage(), 'errors'=>$e->errors()],Response::HTTP_UNPROCESSABLE_ENTITY);
+
+        }
+    }
+
 
     /**
      * Display the specified resource.

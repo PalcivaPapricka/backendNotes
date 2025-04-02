@@ -11,6 +11,12 @@ class Category extends Model
 
     protected $table = 'categories';
     protected $fillable = ['name'];
+
+    public function notes()
+    {
+        return $this->belongsToMany(Note::class,'note_category');
+    }
+
 }
 
 
